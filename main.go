@@ -36,7 +36,7 @@ func printPolynomial(p []uint) {
 }
 
 func derive(function []uint) []uint {
-	degree := uint(len(function) - 1) // degree of derivative
+	degree := uint(len(function) - 1) // degree of function
 	derivative := make([]uint, degree)
 
 	for i := range derivative {
