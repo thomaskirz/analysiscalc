@@ -5,93 +5,109 @@ import (
 	"math"
 )
 
-func main() {
-	// polynomial represented as slice with it's degree n being the length of the slice - 1
-	// the first value is the coefficient of x^n, then of x^(n-1)..., the last value is a constant
-	p := []float64{54, 2, -441}
-	printPolynomial(p)
-
-	d := derive(p)
-	fmt.Println("Derivative:")
-	printPolynomial(d)
-
-	if zeroes(p) != nil {
-		fmt.Println("\nZero(es):")
-		for _, v := range zeroes(p) {
-			fmt.Println(v)
-		}
-	}
+// Polynomial represents a polynomial function.
+// Degree must be the highest degree of the summands of the function.
+type Polynomial struct {
+	Degree   uint
+	Summands map[uint]float64
 }
 
-func printPolynomial(p []float64) {
-	degree := len(p) - 1
-	first := true
-	for _, v := range p {
-		if v > 0 {
+func main() {
+	// make example Polynomial (-3x^6 + 5x^5 + 33x^3 - 5x^2 + 2x - 1)
+	p := Polynomial{
+		2,
+		map[uint]float64{
+			0: 1,
+			1: 3,
+			2: -5,
+			// 3: 33,
+			// 5: 5,
+			// 6: -3,
+		},
+	}
+
+	PrintPolynomial(p)
+
+	// print derivative of p
+	fmt.Println("Derivative: ")
+	PrintPolynomial(Derive(p))
+
+	// print zeroes of p
+	fmt.Printf("Zeroes: %v\n", Zeroes(p))
+}
+
+// PrintPolynomial prints a polynomial in the form `5x^5 + 18x^3 - 5x^2 + 2x -1`.
+func PrintPolynomial(p Polynomial) {
+	s := p.Summands
+	deg := p.Degree
+
+	// iterate down from highest (degree) to lowest (0) coefficient
+	for i := deg; ; i-- {
+		if s[i] > 0 {
 			// positive coefficient
-			if !first {
+			if i < deg {
 				fmt.Printf(" + ")
 			}
-			if degree > 1 {
-				fmt.Printf("%gx^%d", v, degree)
-			} else if degree == 1 {
-				fmt.Printf("%gx", v)
+			if i > 1 {
+				fmt.Printf("%gx^%d", s[i], i)
+			} else if i == 1 {
+				fmt.Printf("%gx", s[i])
 			} else {
-				fmt.Printf("%g", v)
+				fmt.Printf("%g", s[i])
 			}
-			first = false
-		} else if v < 0 {
+		} else if s[i] < 0 {
 			// negative coefficient
-			if !first {
+			if i < deg {
 				fmt.Printf(" - ")
-			}
-			if degree > 1 {
-				fmt.Printf("%gx^%d", v*-1, degree)
-			} else if degree == 1 {
-				fmt.Printf("%gx", v*-1)
 			} else {
-				fmt.Printf("%g", v*-1)
+				fmt.Printf("-")
 			}
-			first = false
+			if i > 1 {
+				fmt.Printf("%gx^%d", s[i]*-1, i)
+			} else if i == 1 {
+				fmt.Printf("%gx", s[i]*-1)
+			} else {
+				fmt.Printf("%g", s[i]*-1)
+			}
 		}
-		degree--
+		if i == 0 {
+			break
+		}
 	}
 	fmt.Println()
-	return
 }
 
-func derive(function []float64) []float64 {
-	degree := len(function) - 1 // degree of function (antiderivative)
-	derivative := make([]float64, degree)
+// Derive returns the derivative of a Polynomial as Polynomial
+func Derive(p Polynomial) Polynomial {
+	// this map stores the derivative
+	dsumms := make(map[uint]float64, len(p.Summands))
 
-	for i := range derivative {
-		derivative[i] = function[i] * float64(degree)
-		degree--
+	for i := p.Degree; i > 0; i-- {
+		if p.Summands[i] != 0 {
+			dsumms[i-1] = p.Summands[i] * float64(i)
+		}
 	}
 
-	return derivative
+	return Polynomial{uint(len(dsumms)), dsumms}
 }
 
-func zeroes(f []float64) []float64 {
-	// only works for functions with degree <= 2 for now
+// Zeroes returns a slice containing the zeroes of a quadratic of linear function in no specific order.
+func Zeroes(p Polynomial) []float64 {
 
-	degree := len(f) - 1
-
-	if degree == 1 {
-		return []float64{-(f[1] / f[0])} // ax + b = 0 => x = -a/b
-	} else if degree == 2 {
-
+	if p.Degree == 1 {
+		return []float64{-(p.Summands[1] / p.Summands[0])} // ax+b=0 => x=-a/b
+	} else if p.Degree == 2 {
 		// solve equation with quadratic formula
-		discriminant := f[1]*f[1] - (4 * f[0] * f[2]) // determines the amount of zeroes
+		discriminant := p.Summands[1]*p.Summands[1] - (4 * p.Summands[2] * p.Summands[0]) // determines amount of zeroes
 		if discriminant == 0 {
 			// the function has one zero
-			return []float64{-f[1] + 2*f[0]}
+			return []float64{-p.Summands[1] / 2 * p.Summands[2]}
 		} else if discriminant > 0 {
-			x1 := (-f[1] - math.Sqrt(discriminant)) / (2 * f[0])
-			x2 := (-f[1] + math.Sqrt(discriminant)) / (2 * f[0])
+			x1 := (-p.Summands[1] - math.Sqrt(discriminant)) / (2 * p.Summands[2])
+			x2 := (-p.Summands[1] + math.Sqrt(discriminant)) / (2 * p.Summands[2])
 			return []float64{x1, x2}
 		}
-
 	}
+
 	return nil
 }
