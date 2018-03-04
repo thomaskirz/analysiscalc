@@ -1,27 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"github.com/tombom4/analysiscalc/polynomial"
+	"os"
 )
 
 func main() {
-	// make example Polynomial (-3x^6 + 5x^5 + 33x^3 - 5x^2 + 2x - 1)
-	p := Polynomial{
-		0: 1,
-		1: 3,
-		2: -5,
-		3: 33,
-		5: 5,
-		6: -3,
+	functions := make(polynomial.Functions)
+
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("Waiting for function: ")
+		text, _ := reader.ReadString('\n')
+		fmt.Println(functions.Evaluate(text))
 	}
-
-	p.Print()
-	fmt.Println(p.Degree())
-
-	// print derivative of p
-	fmt.Println("Derivative: ")
-	p.Derive().Print()
-
-	// print zeroes of p
-	fmt.Printf("Zeroes: %v\n", p.Zeroes())
 }
