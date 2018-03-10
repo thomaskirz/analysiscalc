@@ -81,8 +81,6 @@ func (p Polynomial) Derive() Polynomial {
 // Zeroes returns a slice containing the zeroes of a quadratic of linear function in no specific order.
 func (p Polynomial) Zeroes(accuracy float64) ([]float64, error) {
 
-	// TODO: handle saddle points
-
 	if p.Degree() == 1 {
 		return []float64{-(p[1] / p[0])}, nil // ax+b=0 => x=-a/b
 	} else if p.Degree() == 2 {
@@ -150,7 +148,28 @@ func (p Polynomial) Zeroes(accuracy float64) ([]float64, error) {
 }
 
 func (p Polynomial) Extrema(accuracy float64) ([]float64, error) {
-	return p.Derive().Zeroes(accuracy)
+	extrema, err := p.Derive().Zeroes(accuracy)
+	if err != nil {
+		return nil, err
+	}
+
+	// check if extremum is saddle point
+	if p.Degree() < 3 {
+		return extrema, nil
+	} else {
+		for i, extremum := range extrema {
+			zeroes, err := p.Derive().Derive().Zeroes(accuracy)
+			if err != nil {
+				return nil, err
+			}
+			for _, zero := range zeroes {
+				if math.Abs(zero - extremum) < accuracy {
+					extrema = append(extrema[:i], extrema[i+1:]...)
+				}
+			}
+		}
+	}
+	return extrema, nil
 }
 
 func (p Polynomial) Valueat(x float64) (y float64) {
