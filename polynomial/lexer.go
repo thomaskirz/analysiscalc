@@ -15,16 +15,24 @@ const (
 	EOF
 	WHITESPACE
 
-	PLUS   // +
-	MINUS  // -
-	CARET  // ^
-	EQUALS // =
-	VAR    // x
+	PLUS       // +
+	MINUS      // -
+	CARET      // ^
+	EQUALS     // =
+	VAR        // x
+	OPENPARAN  // (
+	CLOSEPARAN // )
 
-	NAME // function name, like 'f(x)'
+	NAME // function name, like 'f'
 
 	INTEGER
 	FLOAT
+
+	// Keywords
+	STORE
+	LOAD
+	DERIVE
+	ZEROES
 )
 
 var eof = rune(0)
@@ -93,9 +101,13 @@ func (s *Scanner) Scan() (Token, string) {
 		return CARET, string(char)
 	case '=':
 		return EQUALS, string(char)
+	case '(':
+		return OPENPARAN, string(char)
+	case ')':
+		return CLOSEPARAN, string(char)
+	default:
+		return ILLEGAL, string(char)
 	}
-
-	return ILLEGAL, string(char)
 }
 func (s *Scanner) scanWhitespace() (Token, string) {
 	// Create a builder and read the current character into it
@@ -120,35 +132,35 @@ func (s *Scanner) scanWhitespace() (Token, string) {
 func (s *Scanner) scanLetters() (Token, string) {
 	// Create a builder and read the current character into it
 	var builder strings.Builder
-	first := s.read()
-	builder.WriteRune(first)
+	builder.WriteRune(s.read())
 
-	// Check if token is either NAME (like 'f(x)', f being some letter) or VAR ('x').
-	// Otherwise return ILLEGAL token
-	if char := s.read(); char == '(' {
-		builder.WriteRune(char)
-	} else {
-		s.unread()
-		if first == 'x' {
-			return VAR, builder.String()
+	// Read all contiguous letters, then break
+	for {
+		if char := s.read(); char == eof {
+			break
+		} else if !isLetter(char) {
+			s.unread()
+			break
 		} else {
-			return ILLEGAL, builder.String()
+			builder.WriteRune(char)
 		}
 	}
 
-	if char := s.read(); char == 'x' {
-		builder.WriteRune(char)
+	// Return VAR, keyword tokens or NAME
+	str := builder.String()
+	if strings.EqualFold(str, "x") {
+		return VAR, str
+	} else if strings.EqualFold(str, "STORE") {
+		return STORE, str
+	} else if strings.EqualFold(str, "LOAD") {
+		return LOAD, str
+	} else if strings.EqualFold(str, "DERIVE") {
+		return DERIVE, str
+	} else if strings.EqualFold(str, "ZEROES") {
+		return ZEROES, str
 	} else {
-		return ILLEGAL, builder.String()
+		return NAME, str
 	}
-
-	if char := s.read(); char == ')' {
-		builder.WriteRune(char)
-	} else {
-		return ILLEGAL, builder.String()
-	}
-
-	return NAME, builder.String()
 }
 
 func (s *Scanner) scanNumber() (Token, string) {

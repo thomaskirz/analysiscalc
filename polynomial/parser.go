@@ -6,7 +6,18 @@ import (
 	"strconv"
 )
 
+type Action int
+
+const (
+	ActDefault Action = iota
+	ActStore
+	ActLoad
+	ActDerive
+	ActZeroes
+)
+
 type InputStatement struct {
+	Request  Action
 	Name     string
 	Function Polynomial
 }
@@ -59,27 +70,71 @@ func (p *Parser) scanIgnoreWhitespace() (Token, string) {
 }
 
 func (p *Parser) Parse() (*InputStatement, error) {
-	stmt := &InputStatement{}
 
+	stmt := &InputStatement{Request: ActDefault}
+
+	switch tok, _ := p.scanIgnoreWhitespace(); tok {
+	case STORE:
+		stmt.Request = ActStore
+	case LOAD:
+		stmt.Request = ActLoad
+	case DERIVE:
+		stmt.Request = ActDerive
+	case ZEROES:
+		stmt.Request = ActZeroes
+	default:
+		p.unscan()
+	}
+
+	// expecting function
 	if tok, lit := p.scanIgnoreWhitespace(); tok == NAME {
-		stmt.Name = string([]rune(lit)[0])
+		stmt.Name = lit
 	} else {
 		return nil, fmt.Errorf("found %q, expected function name", lit)
 	}
 
-	// Expecting EOF or function definition
-	if tok, lit := p.scanIgnoreWhitespace(); tok == EOF {
-		return stmt, nil
-	} else if tok != EQUALS {
-		return nil, fmt.Errorf("found, %q, expected =", lit)
+	if tok, lit := p.scanIgnoreWhitespace(); tok != OPENPARAN {
+		return nil, fmt.Errorf("found %q, expected (", lit)
+	}
+	if tok, lit := p.scanIgnoreWhitespace(); tok != VAR {
+		return nil, fmt.Errorf("found %q, expected x", lit)
+	}
+	if tok, lit := p.scanIgnoreWhitespace(); tok != CLOSEPARAN {
+		return nil, fmt.Errorf("found %q, expected )", lit)
 	}
 
-	stmt.Function = make(Polynomial)
+	if tok, lit := p.scanIgnoreWhitespace(); tok == EQUALS {
+		if stmt.Request == ActDefault || stmt.Request == ActStore {
+			if function, err := p.parsePolynomial(); err != nil {
+				return nil, err
+			} else {
+				stmt.Request = ActStore
+				stmt.Function = function
+			}
+		} else {
+			return nil, fmt.Errorf("found %q, expected EOF", lit)
+		}
+	} else if tok == EOF {
+		if stmt.Request == ActStore {
+			return nil, fmt.Errorf("found EOF, expected =")
+		} else if stmt.Request == ActDefault {
+			stmt.Request = ActLoad
+		}
+	} else {
+		return nil, fmt.Errorf("found %q, expected = or EOF", lit)
+	}
+
+	return stmt, nil
+}
+
+func (p *Parser) parsePolynomial() (Polynomial, error) {
+
+	polynomial := make(Polynomial)
 
 	sign := true // true for positive, false for negative
 	if tok, lit := p.scanIgnoreWhitespace(); tok == MINUS {
 		sign = false
-	} else if tok != PLUS && tok != INTEGER && tok != FLOAT {
+	} else if tok != PLUS && tok != INTEGER && tok != FLOAT && tok != VAR {
 		return nil, fmt.Errorf("found %q, expected function declaration", lit)
 	} else {
 		p.unscan()
@@ -129,7 +184,7 @@ func (p *Parser) Parse() (*InputStatement, error) {
 			p.unscan()
 		}
 
-		stmt.Function[exp] += coeff
+		polynomial[exp] += coeff
 
 		if tok, lit := p.scanIgnoreWhitespace(); tok == PLUS {
 			sign = true
@@ -142,5 +197,5 @@ func (p *Parser) Parse() (*InputStatement, error) {
 		}
 	}
 
-	return stmt, nil
+	return polynomial, nil
 }

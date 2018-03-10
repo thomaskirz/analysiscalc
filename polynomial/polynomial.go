@@ -112,8 +112,6 @@ func (p Polynomial) Zeroes(accuracy float64) ([]float64, error) {
 		presign := (p.Degree()%2 == 0 && p[p.Degree()] > 0) || (p.Degree()%2 == 1 && p[p.Degree()] < 0)
 		postsign := (p.Degree()%2 == 0 && p[p.Degree()] > 0) || (p.Degree()%2 == 1 && p[p.Degree()] > 0)
 
-		fmt.Printf("extrema: %v\n", extrema)
-
 		for i, extremum := range extrema {
 			// if this is the first extremum and there is a zero before it, calculate it with Newton's method
 			// if this is the last extremum and there is a zero after it, calculate it with Newton's method
@@ -124,7 +122,6 @@ func (p Polynomial) Zeroes(accuracy float64) ([]float64, error) {
 						return nil, err
 					} else {
 						zeroes = append(zeroes, nwtn)
-						fmt.Printf("pre    : i: %v, extremum: %v, zero: %v\n", i, extremum, nwtn)
 					}
 				}
 			}
@@ -134,7 +131,6 @@ func (p Polynomial) Zeroes(accuracy float64) ([]float64, error) {
 						return nil, err
 					} else {
 						zeroes = append(zeroes, nwtn)
-						fmt.Printf("post   : i: %v, extremum: %v, zero: %v\n", i, extremum, nwtn)
 					}
 				}
 				continue
@@ -144,7 +140,6 @@ func (p Polynomial) Zeroes(accuracy float64) ([]float64, error) {
 					return nil, err
 				} else {
 					zeroes = append(zeroes, nwtn)
-					fmt.Printf("between: i: %v, extremum: %v, zero: %v\n", i, extremum, nwtn)
 				}
 			}
 		}
