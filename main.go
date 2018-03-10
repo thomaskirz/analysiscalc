@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/tombom4/analysiscalc/polynomial"
+	"github.com/TomBom4/analysiscalc/polynomial"
 	"os"
 	"strings"
 )
