@@ -3,9 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/TomBom4/analysiscalc/polynomial"
+	"github.com/tombom4/analysiscalc/polynomial"
 	"os"
 	"strings"
+	"bytes"
 )
 
 var functions = make(map[string]polynomial.Polynomial)
@@ -62,7 +63,7 @@ func evaluate(input string) string {
 					if zeroes, err := functions[stmt.Name].Zeroes(0.0001); err != nil {
 						return err.Error()
 					} else {
-						var builder strings.Builder
+						var builder bytes.Buffer
 						for _, zero := range zeroes {
 							builder.WriteString(fmt.Sprintf("%.3f\t", zero))
 						}

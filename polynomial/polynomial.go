@@ -1,9 +1,9 @@
 package polynomial
 
 import (
+	"bytes"
 	"fmt"
 	"math"
-	"strings"
 )
 
 // Polynomial represents a polynomial function.
@@ -21,7 +21,7 @@ func (p Polynomial) Degree() (deg uint) {
 
 // String returns a polynomial as a string in the form '5x^5 + 18x^3 - 5x^2 + 2x -1'.
 func (p Polynomial) String() string {
-	var str strings.Builder
+	var str bytes.Buffer
 
 	// iterate down from highest (degree) to lowest (0) coefficient
 	for i := p.Degree(); ; i-- {
@@ -30,12 +30,16 @@ func (p Polynomial) String() string {
 			if i < p.Degree() {
 				str.WriteString(" + ")
 			}
-			if i > 1 {
-				str.WriteString(fmt.Sprintf("%gx^%d", p[i], i))
-			} else if i == 1 {
-				str.WriteString(fmt.Sprintf("%gx", p[i]))
-			} else {
+
+			// print coefficient if greater 1 or degree is 0
+			if p[i] > 1 || i == 0 && p[i] > 0 {
 				str.WriteString(fmt.Sprintf("%g", p[i]))
+			}
+
+			if i > 1 {
+				str.WriteString(fmt.Sprintf("x^%d", i))
+			} else if i == 1 {
+				str.WriteString(fmt.Sprintf("x",))
 			}
 		} else if p[i] < 0 {
 			// negative coefficient
@@ -44,12 +48,16 @@ func (p Polynomial) String() string {
 			} else {
 				str.WriteString("-")
 			}
-			if i > 1 {
-				str.WriteString(fmt.Sprintf("%gx^%d", p[i]*-1, i))
-			} else if i == 1 {
-				str.WriteString(fmt.Sprintf("%gx", p[i]*-1))
-			} else {
+
+			// print coefficient if greater 1 or degree is 0
+			if p[i] > 1 || i == 0 && p[i] > 0 {
 				str.WriteString(fmt.Sprintf("%g", p[i]*-1))
+			}
+
+			if i > 1 {
+				str.WriteString(fmt.Sprintf("x^%d", i))
+			} else if i == 1 {
+				str.WriteString(fmt.Sprintf("x"))
 			}
 		}
 		if i == 0 {
@@ -82,7 +90,7 @@ func (p Polynomial) Derive() Polynomial {
 func (p Polynomial) Zeroes(accuracy float64) ([]float64, error) {
 
 	if p.Degree() == 1 {
-		return []float64{-(p[1] / p[0])}, nil // ax+b=0 => x=-a/b
+		return []float64{-(p[0] / p[1])}, nil // ax+b=0 => x=-b/a
 	} else if p.Degree() == 2 {
 
 		// solve equation with quadratic formula
@@ -110,35 +118,43 @@ func (p Polynomial) Zeroes(accuracy float64) ([]float64, error) {
 		presign := (p.Degree()%2 == 0 && p[p.Degree()] > 0) || (p.Degree()%2 == 1 && p[p.Degree()] < 0)
 		postsign := (p.Degree()%2 == 0 && p[p.Degree()] > 0) || (p.Degree()%2 == 1 && p[p.Degree()] > 0)
 
-		for i, extremum := range extrema {
-			// if this is the first extremum and there is a zero before it, calculate it with Newton's method
-			// if this is the last extremum and there is a zero after it, calculate it with Newton's method
-			// otherwise if there is a zero between this and the next extremum, calculate it with Newton's method
-			if i == 0 {
-				if !math.Signbit(p.Valueat(extremum)) != presign {
-					if nwtn, err := p.newton(extremum-1, accuracy); err != nil {
+		if len(extrema) > 0 {
+			for i, extremum := range extrema {
+				// if this is the first extremum and there is a zero before it, calculate it with Newton's method
+				// if this is the last extremum and there is a zero after it, calculate it with Newton's method
+				// otherwise if there is a zero between this and the next extremum, calculate it with Newton's method
+				if i == 0 {
+					if !math.Signbit(p.Valueat(extremum)) != presign {
+						if nwtn, err := p.newton(extremum-1, accuracy); err != nil {
+							return nil, err
+						} else {
+							zeroes = append(zeroes, nwtn)
+						}
+					}
+				}
+				if i == len(extrema)-1 {
+					if !math.Signbit(p.Valueat(extremum)) != postsign {
+						if nwtn, err := p.newton(extremum+1, accuracy); err != nil {
+							return nil, err
+						} else {
+							zeroes = append(zeroes, nwtn)
+						}
+					}
+					continue
+				}
+				if math.Signbit(p.Valueat(extremum)) != math.Signbit(p.Valueat(extrema[i+1])) {
+					if nwtn, err := p.newton((extremum+extrema[i+1])/2, accuracy); err != nil {
 						return nil, err
 					} else {
 						zeroes = append(zeroes, nwtn)
 					}
 				}
 			}
-			if i == len(extrema)-1 {
-				if !math.Signbit(p.Valueat(extremum)) != postsign {
-					if nwtn, err := p.newton(extremum+1, accuracy); err != nil {
-						return nil, err
-					} else {
-						zeroes = append(zeroes, nwtn)
-					}
-				}
-				continue
-			}
-			if math.Signbit(p.Valueat(extremum)) != math.Signbit(p.Valueat(extrema[i+1])) {
-				if nwtn, err := p.newton((extremum+extrema[i+1])/2, accuracy); err != nil {
-					return nil, err
-				} else {
-					zeroes = append(zeroes, nwtn)
-				}
+		} else if presign != postsign {
+			if nwtn, err := p.newton(0, accuracy); err != nil {
+				return nil, err
+			} else {
+				zeroes = append(zeroes, nwtn)
 			}
 		}
 
@@ -154,21 +170,21 @@ func (p Polynomial) Extrema(accuracy float64) ([]float64, error) {
 	}
 
 	// check if extremum is saddle point
-	if p.Degree() < 3 {
-		return extrema, nil
-	} else {
-		for i, extremum := range extrema {
-			zeroes, err := p.Derive().Derive().Zeroes(accuracy)
-			if err != nil {
-				return nil, err
-			}
-			for _, zero := range zeroes {
-				if math.Abs(zero - extremum) < accuracy {
-					extrema = append(extrema[:i], extrema[i+1:]...)
-				}
-			}
-		}
-	}
+	//if p.Degree() < 3 {
+	//	return extrema, nil
+	//} else {
+	//	for i, extremum := range extrema {
+	//		zeroes, err := p.Derive().Derive().Zeroes(accuracy)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		for _, zero := range zeroes {
+	//			if math.Abs(zero - extremum) < accuracy {
+	//				extrema = append(extrema[:i], extrema[i+1:]...)
+	//			}
+	//		}
+	//	}
+	//}
 	return extrema, nil
 }
 
@@ -180,11 +196,15 @@ func (p Polynomial) Valueat(x float64) (y float64) {
 }
 
 func (p Polynomial) newton(x float64, e float64) (float64, error) {
+	if math.Abs(p.Valueat(x)) < e {
+		return x, nil
+	}
+
 	n, m := 0., x
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 10000000; i++ {
 		n = m
 		m = n - (p.Valueat(n) / p.Derive().Valueat(n))
-		if math.Abs(m-n) < e {
+		if math.Abs(m-n) < e || math.Abs(p.Valueat(m)) < e {
 			return m, nil
 		}
 	}

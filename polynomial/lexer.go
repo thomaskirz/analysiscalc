@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 	"unicode"
+	"bytes"
 )
 
 // Token represents a lexical token
@@ -111,7 +112,7 @@ func (s *Scanner) Scan() (Token, string) {
 }
 func (s *Scanner) scanWhitespace() (Token, string) {
 	// Create a builder and read the current character into it
-	var builder strings.Builder
+	var builder bytes.Buffer
 	builder.WriteRune(s.read())
 
 	// Read every subsequent whitespace character into the builder
@@ -131,8 +132,9 @@ func (s *Scanner) scanWhitespace() (Token, string) {
 }
 func (s *Scanner) scanLetters() (Token, string) {
 	// Create a builder and read the current character into it
-	var builder strings.Builder
-	builder.WriteRune(s.read())
+	var builder bytes.Buffer
+	first := s.read()
+	builder.WriteRune(first)
 
 	// Read all contiguous letters, then break
 	for {
@@ -165,7 +167,7 @@ func (s *Scanner) scanLetters() (Token, string) {
 
 func (s *Scanner) scanNumber() (Token, string) {
 	// Create a builder and read the current character into it
-	var builder strings.Builder
+	var builder bytes.Buffer
 	builder.WriteRune(s.read())
 
 	for {
